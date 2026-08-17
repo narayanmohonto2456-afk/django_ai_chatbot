@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register</title>
+</head>
+
+<body>
+
+<h1>Create Account</h1>
+
+{% if messages %}
+    {% for message in messages %}
+        <p>{{ message }}</p>
+    {% endfor %}
+{% endif %}
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <input
+        type="text"
+        name="username"
+        placeholder="Username"
+    >
+
+    <input
+        type="email"
+        name="email"
+        placeholder="Email"
+    >
+
+    <input
+        type="password"
+        name="password"
+        placeholder="Password"
+    >
+
+    <input
+        type="password"
+        name="confirm_password"
+        placeholder="Confirm password"
+    >
+
+    <button type="submit">
+        Register
+    </button>
+
+</form>
+
+<a href="{% url 'login' %}">
+    Already have an account?
+</a>
+
+</body>
+</html>
