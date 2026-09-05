@@ -1,3 +1,5 @@
+from django.http import JsonResponse
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -26,6 +28,14 @@ def chat_view(request):
     return render(
         request,
         "chatbot/chat.html"
+    )
+
+@ensure_csrf_cookie
+def csrf_view(request):
+    return JsonResponse(
+        {
+            "detail": "CSRF cookie set."
+        }
     )
 
 

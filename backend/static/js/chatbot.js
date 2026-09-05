@@ -247,41 +247,97 @@ $(document).ready(function () {
     // LOAD SINGLE CONVERSATION
     // ============================================================
 
-    function loadConversation(chatId) {
+    function loadConversations() {
 
-        $.ajax({
+    $.ajax({
 
-            url: `/api/chats/${chatId}/`,
+        url: "/api/chats/",
+        type: "GET",
 
-            type: "GET",
+        success: function (response) {
 
-            success: function (conversation) {
+            console.log(
+                "Conversations loaded:",
+                response
+            );
 
-                console.log(
-                    "Conversation loaded:",
-                    conversation
-                );
+            const chatHistory =
+                $("#chatHistory");
 
-                renderMessages(
-                    conversation.messages || []
-                );
+            chatHistory.empty();
 
-            },
 
-            error: function (xhr) {
+            // DRF may return an array directly,
+            // or a paginated object with "results"
+            const conversations =
+                Array.isArray(response)
+                    ? response
+                    : response.results || [];
 
-                console.error(
-                    "Failed to load conversation:",
-                    xhr
-                );
 
-                showError(
-                    "Unable to load conversation."
-                );
+            if (conversations.length === 0) {
+
+                chatHistory.html(`
+                    <div class="text-secondary small p-2">
+                        No conversations yet.
+                    </div>
+                `);
+
+                return;
             }
 
-        });
-    }
+
+            conversations.forEach(
+                function (conversation) {
+
+                    const title =
+                        conversation.title ||
+                        "New Chat";
+
+                    const chatItem = `
+                        <div
+                            class="chat-item"
+                            data-chat-id="${conversation.id}"
+                        >
+
+                            <i
+                                class="bi bi-chat-left-text me-2"
+                            ></i>
+
+                            ${escapeHtml(title)}
+
+                        </div>
+                    `;
+
+                    chatHistory.append(
+                        chatItem
+                    );
+                }
+            );
+
+
+            console.log(
+                "Rendered chat items:",
+                $(".chat-item").length
+            );
+        },
+
+        error: function (xhr) {
+
+            console.error(
+                "Failed to load conversations:",
+                xhr
+            );
+
+            $("#chatHistory").html(`
+                <div class="text-danger small p-2">
+                    Failed to load conversations.
+                </div>
+            `);
+        }
+
+    });
+}
 
 
     // ============================================================
