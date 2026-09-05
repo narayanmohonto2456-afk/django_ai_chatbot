@@ -13,7 +13,7 @@ import { MessageList } from "./MessageList";
 import {
   createConversation,
   getConversations,
-  sendMessage,
+  streamMessage,
 } from "@/lib/api";
 
 import type {
@@ -21,7 +21,12 @@ import type {
   Message,
 } from "@/types/chat";
 
+
 export function ChatLayout() {
+  // ==========================================================
+  // STATE
+  // ==========================================================
+
   const [
     conversations,
     setConversations,
@@ -33,18 +38,19 @@ export function ChatLayout() {
   ] = useState<number | null>(null);
 
   const [
-  messages,
-  setMessages,
-] = useState<Message[]>([]);
+    messages,
+    setMessages,
+  ] = useState<Message[]>([]);
 
   const [
-  isSending,
-  setIsSending,
-] = useState(false);
+    isSending,
+    setIsSending,
+  ] = useState(false);
 
-  // ==========================================
+
+  // ==========================================================
   // LOAD CONVERSATIONS FROM DJANGO
-  // ==========================================
+  // ==========================================================
 
   useEffect(() => {
     async function loadConversations() {
@@ -59,18 +65,20 @@ export function ChatLayout() {
 
         setConversations(data);
 
-if (data.length > 0) {
-  const firstConversation =
-    data[0];
+        if (data.length > 0) {
+          const firstConversation =
+            data[0];
 
-  setActiveConversationId(
-    firstConversation.id
-  );
+          setActiveConversationId(
+            firstConversation.id
+          );
 
-  setMessages(
-    firstConversation.messages ?? []
-  );
-}
+          setMessages(
+            firstConversation.messages ??
+              []
+          );
+        }
+
       } catch (error) {
         console.error(
           "Failed to load conversations:",
@@ -82,122 +90,318 @@ if (data.length > 0) {
     loadConversations();
   }, []);
 
-  // ==========================================
-  // NEW CHAT
-  // ==========================================
+
+  // ==========================================================
+  // CREATE NEW CHAT
+  // ==========================================================
 
   async function handleNewChat() {
-  try {
+    if (isSending) {
+      return;
+    }
+
+    try {
+      const conversation =
+        await createConversation();
+
+      console.log(
+        "Conversation created:",
+        conversation
+      );
+
+      setConversations(
+        (current) => [
+          conversation,
+          ...current,
+        ]
+      );
+
+      setActiveConversationId(
+        conversation.id
+      );
+
+      setMessages(
+        conversation.messages ??
+          []
+      );
+
+    } catch (error) {
+      console.error(
+        "Failed to create conversation:",
+        error
+      );
+    }
+  }
+
+
+  // ==========================================================
+  // SELECT CONVERSATION
+  // ==========================================================
+
+  function handleSelectConversation(
+    id: number
+  ) {
+    if (isSending) {
+      return;
+    }
+
+    setActiveConversationId(id);
+
     const conversation =
-      await createConversation();
+      conversations.find(
+        (item) =>
+          item.id === id
+      );
 
-    console.log(
-      "Conversation created:",
-      conversation
+    setMessages(
+      conversation?.messages ??
+        []
     );
+  }
 
-    setConversations(
+
+  // ==========================================================
+  // SEND MESSAGE WITH STREAMING
+  // ==========================================================
+
+  async function handleSendMessage(
+    content: string
+  ) {
+    if (
+      !activeConversationId ||
+      isSending
+    ) {
+      return;
+    }
+
+    // Temporary IDs are negative so they cannot
+    // collide with Django database IDs.
+
+    const tempUserId =
+      -Date.now();
+
+    const tempAssistantId =
+      tempUserId - 1;
+
+
+    const temporaryUserMessage: Message = {
+      id: tempUserId,
+      role: "user",
+      content,
+    };
+
+
+    const temporaryAssistantMessage: Message = {
+      id: tempAssistantId,
+      role: "assistant",
+      content: "",
+    };
+
+
+    // Show the user's message immediately
+    // and create an empty AI message
+    // where streamed tokens will appear.
+
+    setMessages(
       (current) => [
-        conversation,
         ...current,
+        temporaryUserMessage,
+        temporaryAssistantMessage,
       ]
     );
 
-    setActiveConversationId(
-      conversation.id
-    );
 
-    setMessages(
-      conversation.messages ?? []
-    );
-  } catch (error) {
-    console.error(
-      "Failed to create conversation:",
-      error
-    );
-  }
-}
+    try {
+      setIsSending(true);
 
-  // ==========================================
-  // SELECT CHAT
-  // ==========================================
 
-  function handleSelectConversation(
-  id: number
-) {
-  setActiveConversationId(id);
-
-  const conversation =
-    conversations.find(
-      (conversation) =>
-        conversation.id === id
-    );
-
-  setMessages(
-    conversation?.messages ?? []
-  );
-}
-
-  // ==========================================
-  // SEND MESSAGE
-  // ==========================================
-
-  async function handleSendMessage(
-  content: string
-) {
-  if (
-    !activeConversationId ||
-    isSending
-  ) {
-    return;
-  }
-
-  try {
-    setIsSending(true);
-
-    const response =
-      await sendMessage(
+      await streamMessage(
         activeConversationId,
-        content
+        content,
+        {
+          // ==================================================
+          // STREAM START
+          // ==================================================
+
+          onStart: (
+            conversation,
+            userMessage
+          ) => {
+            console.log(
+              "Streaming started:",
+              conversation
+            );
+
+
+            // Replace temporary user message
+            // with the real database message.
+
+            setMessages(
+              (current) =>
+                current.map(
+                  (message) =>
+                    message.id ===
+                    tempUserId
+                      ? userMessage
+                      : message
+                )
+            );
+
+
+            // Update conversation title.
+            // Django may change "New Chat"
+            // to the first user message.
+
+            setConversations(
+              (current) =>
+                current.map(
+                  (item) =>
+                    item.id ===
+                    conversation.id
+                      ? {
+                          ...item,
+                          title:
+                            conversation.title,
+                        }
+                      : item
+                )
+            );
+          },
+
+
+          // ==================================================
+          // TOKEN RECEIVED FROM OLLAMA
+          // ==================================================
+
+          onToken: (
+            token
+          ) => {
+            setMessages(
+              (current) =>
+                current.map(
+                  (message) =>
+                    message.id ===
+                    tempAssistantId
+                      ? {
+                          ...message,
+
+                          content:
+                            message.content +
+                            token,
+                        }
+                      : message
+                )
+            );
+          },
+
+
+          // ==================================================
+          // STREAM COMPLETE
+          // ==================================================
+
+          onDone: (
+            response
+          ) => {
+            console.log(
+              "Streaming complete:",
+              response
+            );
+
+
+            // If serializer returned full message history,
+            // use the authoritative Django data.
+
+            if (
+              response.conversation
+                .messages
+            ) {
+              setMessages(
+                response.conversation
+                  .messages
+              );
+            } else {
+              // Otherwise replace the temporary AI message
+              // with the saved database message.
+
+              setMessages(
+                (current) =>
+                  current.map(
+                    (message) =>
+                      message.id ===
+                      tempAssistantId
+                        ? response
+                            .assistant_message
+                        : message
+                  )
+              );
+            }
+
+
+            // Update sidebar conversation data.
+
+            setConversations(
+              (current) =>
+                current.map(
+                  (conversation) =>
+                    conversation.id ===
+                    response.conversation.id
+                      ? response.conversation
+                      : conversation
+                )
+            );
+          },
+
+
+          // ==================================================
+          // STREAM ERROR
+          // ==================================================
+
+          onError: (
+            errorMessage
+          ) => {
+            console.error(
+              "Ollama streaming error:",
+              errorMessage
+            );
+          },
+        }
       );
 
-    console.log(
-      "Django AI response:",
-      response
-    );
+    } catch (error) {
+      console.error(
+        "Streaming failed:",
+        error
+      );
 
-    setMessages(
-      response.conversation.messages ??
-        [
-          response.user_message,
-          response.assistant_message,
-        ]
-    );
 
-    setConversations(
-      (current) =>
-        current.map(
-          (conversation) =>
-            conversation.id ===
-            response.conversation.id
-              ? response.conversation
-              : conversation
-        )
-    );
-  } catch (error) {
-    console.error(
-      "Failed to send message:",
-      error
-    );
-  } finally {
-    setIsSending(false);
+      // Replace empty AI message
+      // with a visible error.
+
+      setMessages(
+        (current) =>
+          current.map(
+            (message) =>
+              message.id ===
+              tempAssistantId
+                ? {
+                    ...message,
+
+                    content:
+                      "Something went wrong while generating the response.",
+                  }
+                : message
+          )
+      );
+
+    } finally {
+      setIsSending(false);
+    }
   }
-}
 
 
-  // ==========================================
+  // ==========================================================
   // ACTIVE CONVERSATION
-  // ==========================================
+  // ==========================================================
 
   const activeConversation =
     conversations.find(
@@ -206,24 +410,32 @@ if (data.length > 0) {
         activeConversationId
     );
 
-  // ==========================================
+
+  // ==========================================================
   // UI
-  // ==========================================
+  // ==========================================================
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
+
       <ChatSidebar
-        conversations={conversations}
+        conversations={
+          conversations
+        }
         activeConversationId={
           activeConversationId
         }
         onSelectConversation={
           handleSelectConversation
         }
-        onNewChat={handleNewChat}
+        onNewChat={
+          handleNewChat
+        }
       />
 
+
       <main className="flex min-w-0 flex-1 flex-col">
+
         <ChatHeader
           title={
             activeConversation?.title ??
@@ -231,19 +443,27 @@ if (data.length > 0) {
           }
         />
 
+
         <div className="min-h-0 flex-1 overflow-y-auto">
           <MessageList
-            messages={messages}
+            messages={
+              messages
+            }
           />
         </div>
 
+
         <ChatComposer
-  onSendMessage={
-    handleSendMessage
-  }
-  isSending={isSending}
-/>
+          onSendMessage={
+            handleSendMessage
+          }
+          isSending={
+            isSending
+          }
+        />
+
       </main>
+
     </div>
   );
 }
