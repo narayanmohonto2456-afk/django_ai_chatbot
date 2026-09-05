@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
+from chatbot.views import csrf_view
 
 
 urlpatterns = [
@@ -17,6 +18,11 @@ urlpatterns = [
     path(
         "",
         include("chatbot.urls")
+    ),
+    path(
+    "api/csrf/",
+    csrf_view,
+    name="csrf",
     ),
 
 ]
