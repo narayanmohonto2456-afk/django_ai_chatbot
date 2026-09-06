@@ -556,3 +556,97 @@ export async function streamMessage(
     }
   }
 }
+
+// ============================================================
+// RENAME CONVERSATION
+// ============================================================
+
+export async function renameConversation(
+  conversationId: number,
+  title: string
+): Promise<Conversation> {
+  const csrfToken =
+    await ensureCsrfToken();
+
+  if (!csrfToken) {
+    throw new Error(
+      "Unable to get CSRF token."
+    );
+  }
+
+  const response = await fetch(
+    `${API_URL}/api/chats/${conversationId}/`,
+    {
+      method: "PATCH",
+
+      credentials: "include",
+
+      headers: {
+        Accept:
+          "application/json",
+
+        "Content-Type":
+          "application/json",
+
+        "X-CSRFToken":
+          csrfToken,
+      },
+
+      body: JSON.stringify({
+        title,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText =
+      await response.text();
+
+    throw new Error(
+      `Failed to rename conversation: ${response.status} ${errorText}`
+    );
+  }
+
+  return response.json();
+}
+
+
+// ============================================================
+// DELETE CONVERSATION
+// ============================================================
+
+export async function deleteConversation(
+  conversationId: number
+): Promise<void> {
+  const csrfToken =
+    await ensureCsrfToken();
+
+  if (!csrfToken) {
+    throw new Error(
+      "Unable to get CSRF token."
+    );
+  }
+
+  const response = await fetch(
+    `${API_URL}/api/chats/${conversationId}/`,
+    {
+      method: "DELETE",
+
+      credentials: "include",
+
+      headers: {
+        "X-CSRFToken":
+          csrfToken,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText =
+      await response.text();
+
+    throw new Error(
+      `Failed to delete conversation: ${response.status} ${errorText}`
+    );
+  }
+}

@@ -12,7 +12,9 @@ import { MessageList } from "./MessageList";
 
 import {
   createConversation,
+  deleteConversation,
   getConversations,
+  renameConversation,
   streamMessage,
 } from "@/lib/api";
 
@@ -158,6 +160,164 @@ export function ChatLayout() {
         []
     );
   }
+
+
+  // ==========================================================
+// RENAME CONVERSATION
+// ==========================================================
+
+async function handleRenameConversation(
+  id: number
+) {
+  if (isSending) {
+    return;
+  }
+
+  const conversation =
+    conversations.find(
+      (item) => item.id === id
+    );
+
+  if (!conversation) {
+    return;
+  }
+
+  const newTitle =
+    window.prompt(
+      "Rename conversation",
+      conversation.title
+    );
+
+  // User pressed Cancel
+  if (newTitle === null) {
+    return;
+  }
+
+  const trimmedTitle =
+    newTitle.trim();
+
+  // Prevent empty titles
+  if (!trimmedTitle) {
+    return;
+  }
+
+  // Nothing changed
+  if (
+    trimmedTitle ===
+    conversation.title
+  ) {
+    return;
+  }
+
+  try {
+    const updatedConversation =
+      await renameConversation(
+        id,
+        trimmedTitle
+      );
+
+    setConversations(
+      (current) =>
+        current.map(
+          (item) =>
+            item.id === id
+              ? updatedConversation
+              : item
+        )
+    );
+
+    // Keep active message history synchronized
+    if (
+      id === activeConversationId &&
+      updatedConversation.messages
+    ) {
+      setMessages(
+        updatedConversation.messages
+      );
+    }
+  } catch (error) {
+    console.error(
+      "Failed to rename conversation:",
+      error
+    );
+  }
+}
+
+
+// ==========================================================
+// DELETE CONVERSATION
+// ==========================================================
+
+async function handleDeleteConversation(
+  id: number
+) {
+  if (isSending) {
+    return;
+  }
+
+  const conversation =
+    conversations.find(
+      (item) => item.id === id
+    );
+
+  if (!conversation) {
+    return;
+  }
+
+  const confirmed =
+    window.confirm(
+      `Delete "${conversation.title}"?\n\nThis will permanently delete this conversation and its messages.`
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await deleteConversation(id);
+
+    const remainingConversations =
+      conversations.filter(
+        (item) =>
+          item.id !== id
+      );
+
+    setConversations(
+      remainingConversations
+    );
+
+    // If the deleted conversation was open,
+    // automatically select another one.
+    if (
+      id === activeConversationId
+    ) {
+      const nextConversation =
+        remainingConversations[0];
+
+      if (nextConversation) {
+        setActiveConversationId(
+          nextConversation.id
+        );
+
+        setMessages(
+          nextConversation.messages ??
+            []
+        );
+      } else {
+        setActiveConversationId(
+          null
+        );
+
+        setMessages([]);
+      }
+    }
+  } catch (error) {
+    console.error(
+      "Failed to delete conversation:",
+      error
+    );
+  }
+}
 
 
   // ==========================================================
@@ -419,19 +579,25 @@ export function ChatLayout() {
     <div className="flex h-dvh overflow-hidden bg-background">
 
       <ChatSidebar
-        conversations={
-          conversations
-        }
-        activeConversationId={
-          activeConversationId
-        }
-        onSelectConversation={
-          handleSelectConversation
-        }
-        onNewChat={
-          handleNewChat
-        }
-      />
+  conversations={
+    conversations
+  }
+  activeConversationId={
+    activeConversationId
+  }
+  onSelectConversation={
+    handleSelectConversation
+  }
+  onNewChat={
+    handleNewChat
+  }
+  onRenameConversation={
+    handleRenameConversation
+  }
+  onDeleteConversation={
+    handleDeleteConversation
+  }
+/>
 
 
       <main className="flex min-w-0 flex-1 flex-col">
