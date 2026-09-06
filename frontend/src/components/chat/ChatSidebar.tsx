@@ -42,7 +42,12 @@ type ChatSidebarProps = {
   onDeleteConversation: (
     id: number
   ) => void;
+
+  onCloseSidebar: () => void;
+
+  mobile?: boolean;
 };
+
 
 
 export function ChatSidebar({
@@ -52,6 +57,8 @@ export function ChatSidebar({
   onNewChat,
   onRenameConversation,
   onDeleteConversation,
+  onCloseSidebar,
+  mobile = false,
 }: ChatSidebarProps) {
   const [
     searchQuery,
@@ -87,7 +94,13 @@ export function ChatSidebar({
 
 
   return (
-    <aside className="hidden h-screen w-[280px] shrink-0 border-r bg-neutral-950 text-neutral-100 md:flex md:flex-col">
+    <aside
+  className={
+    mobile
+      ? "flex h-full w-full flex-col bg-neutral-950 text-neutral-100"
+      : "hidden h-screen w-[280px] shrink-0 border-r bg-neutral-950 text-neutral-100 md:flex md:flex-col"
+  }
+>
 
       {/* =====================================================
           LOGO / HEADER
@@ -115,13 +128,15 @@ export function ChatSidebar({
 
 
         <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="text-neutral-400 hover:bg-neutral-900 hover:text-white"
-        >
-          <PanelLeftClose className="h-4 w-4" />
-        </Button>
+  type="button"
+  variant="ghost"
+  size="icon"
+  onClick={onCloseSidebar}
+  className="text-neutral-400 hover:bg-neutral-900 hover:text-white"
+  aria-label="Close sidebar"
+>
+  <PanelLeftClose className="h-4 w-4" />
+</Button>
 
       </div>
 

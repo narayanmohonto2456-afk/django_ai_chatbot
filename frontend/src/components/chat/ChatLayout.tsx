@@ -43,6 +43,12 @@ import {
 
 import { Button } from "@/components/ui/button";
 
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+} from "@/components/ui/sheet";
+
 
 export function ChatLayout() {
   // ==========================================================
@@ -87,6 +93,16 @@ const [
 const [
   isManagingConversation,
   setIsManagingConversation,
+] = useState(false);
+
+const [
+  isSidebarOpen,
+  setIsSidebarOpen,
+] = useState(true);
+
+const [
+  isMobileSidebarOpen,
+  setIsMobileSidebarOpen,
 ] = useState(false);
 
 
@@ -666,36 +682,95 @@ async function handleConfirmDelete() {
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
 
-      <ChatSidebar
-  conversations={
-    conversations
+      {isSidebarOpen && (
+  <ChatSidebar
+    conversations={
+      conversations
+    }
+    activeConversationId={
+      activeConversationId
+    }
+    onSelectConversation={
+      handleSelectConversation
+    }
+    onNewChat={
+      handleNewChat
+    }
+    onRenameConversation={
+      handleRenameConversation
+    }
+    onDeleteConversation={
+      handleDeleteConversation
+    }
+    onCloseSidebar={() =>
+      setIsSidebarOpen(false)
+    }
+  />  
+)}
+<Sheet
+  open={isMobileSidebarOpen}
+  onOpenChange={
+    setIsMobileSidebarOpen
   }
-  activeConversationId={
-    activeConversationId
-  }
-  onSelectConversation={
-    handleSelectConversation
-  }
-  onNewChat={
-    handleNewChat
-  }
-  onRenameConversation={
-    handleRenameConversation
-  }
-  onDeleteConversation={
-    handleDeleteConversation
-  }
-/>
+>
+  <SheetContent
+    side="left"
+    showCloseButton={false}
+    className="w-[300px] max-w-[85vw] gap-0 p-0 md:hidden"
+  >
+    <SheetTitle className="sr-only">
+      Conversations
+    </SheetTitle>
 
+    <ChatSidebar
+      mobile
+      conversations={
+        conversations
+      }
+      activeConversationId={
+        activeConversationId
+      }
+      onSelectConversation={(id) => {
+        handleSelectConversation(id);
+        setIsMobileSidebarOpen(false);
+      }}
+      onNewChat={() => {
+        setIsMobileSidebarOpen(false);
+        void handleNewChat();
+      }}
+      onRenameConversation={(id) => {
+        setIsMobileSidebarOpen(false);
+        handleRenameConversation(id);
+      }}
+      onDeleteConversation={(id) => {
+        setIsMobileSidebarOpen(false);
+        handleDeleteConversation(id);
+      }}
+      onCloseSidebar={() =>
+        setIsMobileSidebarOpen(false)
+      }
+    />
+  </SheetContent>
+</Sheet>
 
       <main className="flex min-w-0 flex-1 flex-col">
 
+
         <ChatHeader
-          title={
-            activeConversation?.title ??
-            "New Chat"
-          }
-        />
+  title={
+    activeConversation?.title ??
+    "New Chat"
+  }
+  isSidebarOpen={
+    isSidebarOpen
+  }
+  onOpenSidebar={() =>
+    setIsSidebarOpen(true)
+  }
+  onOpenMobileSidebar={() =>
+    setIsMobileSidebarOpen(true)
+  }
+/>
 
 
         <div className="min-h-0 flex-1 overflow-y-auto">
