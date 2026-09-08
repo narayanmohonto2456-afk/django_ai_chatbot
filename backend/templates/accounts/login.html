@@ -1,44 +1,26 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Login</title>
-</head>
-
-<body>
-
-<h1>Login</h1>
-
-{% if messages %}
-    {% for message in messages %}
-        <p>{{ message }}</p>
-    {% endfor %}
-{% endif %}
-
-<form method="POST">
-
-    {% csrf_token %}
-
-    <input
-        type="text"
-        name="username"
-        placeholder="Username"
-    >
-
-    <input
-        type="password"
-        name="password"
-        placeholder="Password"
-    >
-
-    <button type="submit">
-        Login
-    </button>
-
-</form>
-
-<a href="{% url 'register' %}">
-    Create account
-</a>
-
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Sign in | Local AI Chatbot{% endblock %}
+{% block content %}
+<main class="auth-shell">
+    <section class="auth-card" aria-labelledby="login-title">
+        <h1 id="login-title">Sign in</h1>
+        <p class="muted">Use your existing account to access the local AI chatbot.</p>
+        {% if messages %}
+        <ul class="messages" aria-live="polite">
+            {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            <label for="username">Username</label>
+            <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required>
+            <button type="submit">Sign in</button>
+        </form>
+        <p class="footer">No account? <a href="{% url 'register' %}">Create one</a></p>
+    </section>
+</main>
+{% endblock %}

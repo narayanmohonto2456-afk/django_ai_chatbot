@@ -1,56 +1,30 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Register</title>
-</head>
-
-<body>
-
-<h1>Create Account</h1>
-
-{% if messages %}
-    {% for message in messages %}
-        <p>{{ message }}</p>
-    {% endfor %}
-{% endif %}
-
-<form method="POST">
-
-    {% csrf_token %}
-
-    <input
-        type="text"
-        name="username"
-        placeholder="Username"
-    >
-
-    <input
-        type="email"
-        name="email"
-        placeholder="Email"
-    >
-
-    <input
-        type="password"
-        name="password"
-        placeholder="Password"
-    >
-
-    <input
-        type="password"
-        name="confirm_password"
-        placeholder="Confirm password"
-    >
-
-    <button type="submit">
-        Register
-    </button>
-
-</form>
-
-<a href="{% url 'login' %}">
-    Already have an account?
-</a>
-
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Register | Local AI Chatbot{% endblock %}
+{% block content %}
+<main class="auth-shell">
+    <section class="auth-card" aria-labelledby="register-title">
+        <h1 id="register-title">Create an account</h1>
+        <p class="muted">Register to save your conversations and use the local AI assistant.</p>
+        {% if messages %}
+        <ul class="messages" aria-live="polite">
+            {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        <form method="post" action="{% url 'register' %}">
+            {% csrf_token %}
+            <label for="username">Username</label>
+            <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" required>
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="new-password" required>
+            <label for="confirm_password">Confirm password</label>
+            <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
+            <button type="submit">Create account</button>
+        </form>
+        <p class="footer">Already registered? <a href="{% url 'login' %}">Sign in</a></p>
+    </section>
+</main>
+{% endblock %}
