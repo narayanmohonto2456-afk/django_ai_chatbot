@@ -42,3 +42,7 @@ media/
 # Secrets
 *.pem
 *.key
+!.env.example
+*.bak
+/backend-cleanup/
+/chatbot-security-kit/
